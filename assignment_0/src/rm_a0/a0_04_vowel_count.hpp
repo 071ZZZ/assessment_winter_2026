@@ -3,6 +3,7 @@
 #include<string>
 #include<cctype>
 namespace rm_a0{
-    int CountVowels(std::string line);
+    bool IsVowelChar(unsigned char c);
+    std::size_t CountVowels(const std::string& line);
 }
 #endif 

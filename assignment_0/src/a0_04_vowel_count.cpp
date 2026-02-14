@@ -4,16 +4,19 @@
 
 #include "rm_a0/a0_04_vowel_count.hpp"
 namespace rm_a0{
-  int CountVowels(std::string line){
-    int count=0;
-    for(char c:line){
-      char lower_c=std::tolower(c);
-      if(lower_c == 'a' || lower_c == 'e' || lower_c == 'i' || lower_c == 'o' || lower_c == 'u'){
-        ++count;
+  bool IsVowelChar(unsigned char c) {
+    c = tolower(c);
+    return c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u';
+  }
+  std::size_t CountVowels(const std::string& line) {
+    std::size_t count = 0;
+    for (char ch : line) {
+      if (rm_a0::IsVowelChar(static_cast<unsigned char>(ch))) {
+        count++;
       }
     }
     return count;
-  }
+}
 }
 int main() {
   std::string line;

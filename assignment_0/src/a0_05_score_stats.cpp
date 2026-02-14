@@ -6,39 +6,49 @@
 
 #include "rm_a0/a0_05_score_stats.hpp"
 namespace rm_a0{
-  struct student {
+  ScoreStatsResult ComputeScoreStats(const std::string& input, bool& ok) {
+    ok = false;
+    ScoreStatsResult res;
+    std::istringstream in(input);
+    int n;
+    if(!(in >> n)){
+      return res;
+    }
     std::string name;
     int score;
-  };
-    std::string SolveScoreStats(std::string s,bool& ok){
-      ok = false;
-      std::istringstream iss(s);
-      int n;
-      iss >> n;
-      std::vector<student> scores;
-      int total = 0;
-      int max = -1;
-      std::string max_name;
-      for (int i=0;i<n;i++){
-        std::string name;
-        int score;
-        if(!(iss >> name >> score)){
-          return "";
+    int sum = 0;
+    int count = 0;
+    int max_score = -1;
+    std::string max_name;
+    for(int i=0;i<n;i++){
+      if(in >> name >> score) {
+        sum += score;
+        count++;
+        if (score > max_score) {
+            max_score = score;
+            max_name = name;
         }
-        scores.push_back({name,score});
-        total += score;
-        if(score>max){
-          max=score;
-          max_name=name;
-        }
-      }
-      double average = static_cast<double>(total) / n;
-      std::ostringstream oss;
-      oss << "top=" << max_name << " " << max << "\n";
-      oss << std::fixed << std::setprecision(2) << "avg:" << average;
-      ok = true;
-      return oss.str();
-    } 
+    }
+  }
+    if (count == 0) {
+        return res;
+    }
+    res.top_name = max_name;
+    res.top_score = max_score;
+    res.avg = static_cast<double>(sum) / count;
+    ok = true;
+    return res;
+}
+    std::string SolveScoreStats(const std::string& input, bool& ok) {
+    auto res = ComputeScoreStats(input, ok);
+    if (!ok) {
+        return {};
+    }
+    std::ostringstream out;
+    out << "top=" << res.top_name << " " << res.top_score << "\n";
+    out << "avg=" << std::fixed << std::setprecision(2) << res.avg << "\n";
+    return out.str();
+}
 }
 
 int main() {
