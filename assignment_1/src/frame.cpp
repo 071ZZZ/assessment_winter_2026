@@ -38,9 +38,20 @@ uint16_t Crc16Ccitt(const uint8_t* data, size_t len) {
   // 参数：poly=0x1021, init=0xFFFF。
   // CRC 必须覆盖 version..payload 这些字节（即 SOF 之后、crc16 之前的全部内容）。
   // 单元测试依赖这一点。
-  (void)data;
-  (void)len;
-  return 0;
+  const uint16_t poly = 0x1021;
+    uint16_t crc = 0xFFFF;
+
+    for (size_t i = 0; i < len; ++i) {
+        crc ^= (static_cast<uint16_t>(data[i]) << 8);
+        for (int j = 0; j < 8; ++j) {
+            if (crc & 0x8000) {
+                crc = (crc << 1) ^ poly;
+            } else {
+                crc <<= 1;
+            }
+        }
+    }
+  return crc;
 }
 
 std::vector<uint8_t> Encode(const Frame& f) {
