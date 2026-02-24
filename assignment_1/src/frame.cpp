@@ -77,9 +77,11 @@ std::vector<uint8_t> Encode(const Frame& f) {
   AppendLe16(out, f.seq);
   out.push_back(f.type);
   out.insert(out.end(), f.payload.begin(), f.payload.end());
-
+  const uint8_t* crc_data = out.data()+2;
+  size_t crc_len = out.size()-2;
+  uint16_t crc = Crc16Ccitt(crc_data,crc_len);
   // TODO: 替换为真实的 CRC。
-  AppendLe16(out, 0);
+  AppendLe16(out, crc);
   return out;
 }
 
@@ -91,9 +93,42 @@ bool TryDecode(std::vector<uint8_t>& buffer, Frame& out) {
   // - 若不足以组成完整帧：返回 false，并保持 buffer 不变。
   // - 若候选帧 CRC 错误 / 长度非法：丢弃部分字节并继续搜索（必须避免死循环）。
   // - 成功时：填充 out，从 buffer 中擦除已消费的字节，并返回 true。
-  (void)buffer;
-  (void)out;
-  return false;
+  while(true){
+    if(buffer.size()<2){
+      return false;
+    }
+    size_t sof_pos = 0;
+    bool found = false;
+    for(;sof_pos+1<buffer.size();++sof_pos){
+      if(buffer[sof_pos] == 0xA5 && buffer[sof_pos+1] == 0x5A){
+        found = true;
+        break;
+      }
+    }
+    if(!found){
+      buffer.clear();
+      return false;
+    }
+    if (sof_pos > 0) {
+            buffer.erase(buffer.begin(), buffer.begin() + sof_pos);
+            continue;
+        }
+    uint16_t payload_len = ReadLe16(buffer,3);
+    size_t total_len = 2+1+2+2+1+payload_len+2;//SOF(2) + version(1) + payload_len(2) + seq(2) + type(1)
+    if (buffer.size() < total_len) {
+            return false;
+    }
+    const uint8_t* crc_data = buffer.data()+2; 
+        size_t crc_len = total_len-4;  
+        uint16_t expected_crc = Crc16Ccitt(crc_data, crc_len);
+        uint16_t actual_crc = ReadLe16(buffer, total_len-2);
+    out.version = buffer[2];
+    out.seq = ReadLe16(buffer, 5);
+    out.type = buffer[7];
+    out.payload.assign(buffer.begin() + 8, buffer.begin() + 8 + payload_len);
+    buffer.erase(buffer.begin(), buffer.begin() + total_len);
+    return true;
+}
 }
 
 bool ParseHexBytes(const std::string& text, std::vector<uint8_t>& out) {
