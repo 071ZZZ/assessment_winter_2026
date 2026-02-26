@@ -3,7 +3,14 @@
 #include <iostream>
 #include <string>
 #include <vector>
-
+namespace rm_a0{
+  std::vector<std::string> RunTextPipeline(const std::string& pipeline, const std::vector<std::string>& lines, bool& ok) {
+    (void)pipeline;
+    (void)lines;
+    ok = false;
+    return {};
+}
+}
 int main() {
   std::string pipeline;
   if (!std::getline(std::cin, pipeline)) return 0;
