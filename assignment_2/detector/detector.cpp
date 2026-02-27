@@ -2,7 +2,25 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <sstream>
+#include <iomanip>
 #include "detector.hpp"
+static const cv::Mat cameraMatrix = (cv::Mat_<double>(3,3) <<
+    1284.547433507284, 0.0, 651.7508235222139,
+    0.0, 1284.2364120767988, 526.5637803861928,
+    0.0, 0.0, 1.0
+);
+
+static const cv::Mat distCoeffs = (cv::Mat_<double>(5,1) <<
+    -0.37358321087789575,
+    0.17992488578084675,
+    -0.0003940895801771612,
+    -0.0007097534681170694,
+    0.0
+);
+
+static const double real_radius = 0.0084; 
+
 cv::Mat Detector::preprocess(const cv::Mat& img){
     cv::Mat img_hsv,mask;
     cv::cvtColor(img,img_hsv,cv::COLOR_BGR2HSV);
@@ -14,7 +32,6 @@ cv::Mat Detector::preprocess(const cv::Mat& img){
     morphologyEx(mask, mask, cv::MORPH_CLOSE, kernel); // 闭运算：修复弹丸轮廓
     return mask;
 }
-
 
 std::vector<cv::Vec3f> Detector::findcircle(const cv::Mat& mask) {
     std::vector<cv::Vec3f> circles;
@@ -44,6 +61,45 @@ void Detector::balldetector(const cv::Mat& img, cv::Mat& img_clone) {
         cv::Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
         int radius = cvRound(circles[i][2]);
         circle(img_clone, center, radius, cv::Scalar(0, 255, 0), 2, 8, 0);
+    
+        std::vector<cv::Point3f> object_points;
+        std::vector<cv::Point2f> image_points;
+        object_points.emplace_back(-real_radius, 0, 0);
+        object_points.emplace_back( real_radius, 0, 0);
+        object_points.emplace_back(0, -real_radius, 0);
+        object_points.emplace_back(0,  real_radius, 0); 
+        object_points.emplace_back(0, 0, 0);
+
+        image_points.emplace_back(center.x - radius, center.y);
+        image_points.emplace_back(center.x + radius, center.y); 
+        image_points.emplace_back(center.x, center.y - radius);
+        image_points.emplace_back(center.x, center.y + radius);
+        image_points.emplace_back(center.x, center.y);
+        cv::Mat rvec, tvec;
+        bool success = cv::solvePnP(
+            object_points,
+            image_points,
+            cameraMatrix,
+            distCoeffs,
+            rvec,
+            tvec
+        );
+        if (success) {
+            double distance = tvec.at<double>(2);
+            std::stringstream ss;
+            ss << std::fixed << std::setprecision(6) << distance << " m";
+            cv::putText(
+                img_clone,
+                ss.str(),
+                cv::Point(center.x, center.y - 10),
+                cv::FONT_HERSHEY_SIMPLEX,
+                0.5,
+                cv::Scalar(0, 255, 255),
+                1
+            );
+        } else {
+            std::cerr << "弹丸 " << i << " PnP 求解失败！" << std::endl;
+        }
     }
 }
 int main() {
